@@ -28,8 +28,14 @@ custom_css = """
         background-color: #1F5E8C !important;
         color: white !important;
         border: 2px solid #B79A5B !important;
+        padding: 0.8rem !important;
+        font-weight: bold !important;
+        border: 2px solid #B79A5B !important;
         width: 100%;
     }
+    
+    /* Estilização dos campos de texto e seleção */
+    .stTextInput label, .stSelectbox label { color: #0E3A5D; font-weight: bold; }
     
     /* Input de Notas */
     .stSlider label { color: #0E3A5D; font-weight: bold; }
@@ -43,23 +49,25 @@ def get_gsheet_client():
     credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
     return gspread.authorize(credentials)
 
-def save_to_sheets(score, comment):
+def save_to_sheets(nome, setor, score, comment):
     try:
         client = get_gsheet_client()
         sheet_id = st.secrets["SHEET_ID"]
         sh = client.open_by_key(sheet_id)
         
-        # Tenta selecionar a aba, se não existir, cria
         try:
             worksheet = sh.worksheet("respostas")
         except gspread.exceptions.WorksheetNotFound:
             worksheet = sh.add_worksheet(title="respostas", rows="100", cols="20")
-            worksheet.append_row(["timestamp", "nps_score", "nps_comment", "source", "app_version"])
+            # Atualizei o cabeçalho para incluir os novos campos
+            worksheet.append_row(["timestamp", "cliente", "setor", "nps_score", "nps_comment", "source", "app_version"])
         
         data = [
             datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            nome,
+            setor,
             score,
-            comment[:500], # Limite de caracteres
+            comment[:500],
             "streamlit_app",
             "v1"
         ]
@@ -74,27 +82,45 @@ with st.container():
     # Cabeçalho
     st.markdown('<div class="header-container">', unsafe_allow_html=True)
     try:
-        st.image("Logo Escrita.png", width=180)
+        # Mantendo sua alteração manual do nome do arquivo
+        st.image("Logo Escrita.png", width=220)
     except:
-        st.warning("Logo não encontrado em assets/logo.png")
+        st.warning("Arquivo 'Logo Escrita.png' não encontrado na raiz do projeto.")
+        
     st.markdown('<h1 class="header-title">Pesquisa de Satisfação</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="header-subtitle">Leva menos de 30 segundos</p>', unsafe_allow_html=True)
+    st.markdown('<p class="header-subtitle">Sua opinião ajuda a Escrita Contabilidade a crescer</p>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Formulário
     with st.form("nps_form", clear_on_submit=True):
+        st.markdown("### Identificação")
+        col1, col2 = st.columns(2)
+        with col1:
+            nome_cliente = st.text_input("Seu nome ou empresa:", placeholder="Ex: João Silva / Empresa ABC")
+        with col2:
+            setor_atendimento = st.selectbox(
+                "Qual setor te atendeu?", 
+                ["Contábil", "Fiscal", "RH / Pessoal", "Legal / Societário", "Diretoria", "Outros"]
+            )
+
+        st.divider()
+        
         st.markdown("### De 0 a 10, o quanto você recomendaria a Escrita Contabilidade para um amigo ou colega?")
         score = st.select_slider("Arraste para escolher sua nota:", options=list(range(11)), value=10)
         
-        comment = st.text_area("Se quiser, conte rapidamente o motivo da sua nota (opcional):", 
-                              placeholder="Sua opinião é muito importante para nós...",
+        comment = st.text_area("Conte-nos o motivo da sua nota (opcional):", 
+                              placeholder="Fale sobre sua experiência...",
                               max_chars=500)
         
+        st.write("---")
         submit = st.form_submit_button("Enviar Resposta")
         
         if submit:
-            with st.spinner("Enviando..."):
-                sucesso = save_to_sheets(score, comment)
-                if sucesso:
-                    st.balloons()
-                    st.success("Obrigado! Sua resposta foi registrada com sucesso.")
+            if not nome_cliente:
+                st.error("Por favor, preencha o campo de identificação (Nome ou Empresa).")
+            else:
+                with st.spinner("Registrando sua resposta..."):
+                    sucesso = save_to_sheets(nome_cliente, setor_atendimento, score, comment)
+                    if sucesso:
+                        st.balloons()
+                        st.success(f"Obrigado, {nome_cliente}! Sua resposta foi registrada com sucesso.")
