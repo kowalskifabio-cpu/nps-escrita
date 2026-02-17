@@ -74,7 +74,7 @@ with st.container():
     # Cabeçalho
     st.markdown('<div class="header-container">', unsafe_allow_html=True)
     try:
-        st.image("assets/Logo Escrita.png", width=180)
+        st.image("Logo Escrita.png", width=180)
     except:
         st.warning("Logo não encontrado em assets/logo.png")
     st.markdown('<h1 class="header-title">Pesquisa de Satisfação</h1>', unsafe_allow_html=True)
