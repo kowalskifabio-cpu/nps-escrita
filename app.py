@@ -55,28 +55,27 @@ def save_to_sheets(nome, setor, score, comment):
         sheet_id = st.secrets["SHEET_ID"]
         sh = client.open_by_key(sheet_id)
         
-        try:
-            worksheet = sh.worksheet("respostas")
-        except gspread.exceptions.WorksheetNotFound:
-            worksheet = sh.add_worksheet(title="respostas", rows="100", cols="20")
-            # Atualizei o cabeçalho para incluir os novos campos
-            worksheet.append_row(["timestamp", "cliente", "setor", "nps_score", "nps_comment", "source", "app_version"])
+        # Seleciona a aba que você acabou de renomear manualmente
+        worksheet = sh.worksheet("respostas")
         
+        # Prepara a linha com os dados na ordem exata das colunas da planilha
         data = [
-            datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-            nome,
-            setor,
-            score,
-            comment[:500],
-            "streamlit_app",
-            "v1"
+            datetime.now().strftime("%d/%m/%Y %H:%M:%S"), # timestamp
+            nome,                                         # cliente
+            setor,                                        # setor
+            score,                                        # nps_score
+            comment[:500],                                # nps_comment
+            "streamlit_app",                              # source
+            "v1"                                          # app_version
         ]
+        
+        # Adiciona a linha no final da planilha
         worksheet.append_row(data)
         return True
     except Exception as e:
-        st.error(f"Erro ao salvar: {e}")
+        st.error(f"Erro técnico: {e}")
         return False
-
+        
 # 3. Interface Visual
 with st.container():
     # Cabeçalho
